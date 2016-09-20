@@ -107,7 +107,7 @@ class Simhash(object):
 
 class SimhashIndex(object):
 
-    def __init__(self, objs, f=64, k=2):
+    def __init__(self, conn, objs, f=64, k=2):
         """
         `objs` is a list of (obj_id, simhash)
         obj_id is a string, simhash is an instance of Simhash
@@ -119,7 +119,7 @@ class SimhashIndex(object):
         count = len(objs)
         logging.info('Initializing %s data.', count)
 
-        self.bucket = collections.defaultdict(set)
+        self.bucket = conn
 
         for i, q in enumerate(objs):
             if i % 10000 == 0 or i == count - 1:
@@ -137,7 +137,7 @@ class SimhashIndex(object):
         ans = set()
 
         for key in self.get_keys(simhash):
-            dups = self.bucket[key]
+            dups = self.bucket.smembers(key)
             logging.debug('key:%s', key)
             if len(dups) > 200:
                 logging.warning('Big bucket found. key:%s, len:%s', key, len(dups))
@@ -160,7 +160,7 @@ class SimhashIndex(object):
 
         for key in self.get_keys(simhash):
             v = '%x,%s' % (simhash.value, obj_id)
-            self.bucket[key].add(v)
+            self.bucket.sadd(key, v)
 
     def delete(self, obj_id, simhash):
         """
@@ -171,8 +171,8 @@ class SimhashIndex(object):
 
         for key in self.get_keys(simhash):
             v = '%x,%s' % (simhash.value, obj_id)
-            if v in self.bucket[key]:
-                self.bucket[key].remove(v)
+            if self.bucket.sismember(key, v):
+                self.bucket.srem(key, v)
 
     @property
     def offsets(self):
@@ -190,5 +190,5 @@ class SimhashIndex(object):
             c = simhash.value >> offset & m
             yield '%x:%x' % (c, i)
 
-    def bucket_size(self):
-        return len(self.bucket)
+#    def bucket_size(self):
+#        return len(self.bucket)
