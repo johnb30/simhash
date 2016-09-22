@@ -161,6 +161,8 @@ class SimhashIndex(object):
         for key in self.get_keys(simhash):
             v = '%x,%s' % (simhash.value, obj_id)
             self.bucket.sadd(key, v)
+            #Set key expiration for 1 days
+            self.bucket.expire(key, 1*24*60)
 
     def delete(self, obj_id, simhash):
         """
